@@ -1,0 +1,30 @@
+
+apm-server:
+  # Defines the host and port the server is listening on. Use "unix:/path/to.sock" to listen on a unix domain socket.
+  host: "0.0.0.0:8200"
+
+  kibana:
+    enabled: true
+    host: https://kibana:5601
+    ssl: 
+      enabled: true
+      certificate_authorities: ["${CERTS_DIR}/ca/ca.crt"]
+      # certificate: "${CERTS_DIR}/apm-server/apm-server.crt"
+      # key: "${CERTS_DIR}/apm-server/apm-server.key"
+      # key_passphrase: "${PEM_PASSWORD}"
+
+
+  rum:
+    enabled: false
+
+setup.kibana.host: https://kibana:5601
+setup.template.settings.index.number_of_replicas: 0
+
+output.elasticsearch:
+  hosts: ["https://node-1:9200"]
+  ssl:
+    enabled: true
+    certificate_authorities: ["${CERTS_DIR}/ca/ca.crt"]
+    certificate: "${CERTS_DIR}/apm-server/apm-server.crt"
+    key: "${CERTS_DIR}/apm-server/apm-server.key"
+    key_passphrase: "${PEM_PASSWORD}"

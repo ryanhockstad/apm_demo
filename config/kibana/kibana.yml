@@ -1,0 +1,21 @@
+elasticsearch:
+  hosts: ["https://node-1:9200"]
+  ssl:
+    verificationMode: full
+    alwaysPresentCertificate: true
+    keyPassphrase: '${KEY_PASSPHRASE}'
+    certificateAuthorities: ['${CERTS_DIR}/ca/ca.crt']
+    certificate: '${CERTS_DIR}/kibana/kibana.crt'
+    key: '${CERTS_DIR}/kibana/kibana.key'
+
+server:
+  name: kibana
+  host: 0.0.0.0
+  ssl:
+    enabled: true
+    certificate: '${CERTS_DIR}/kibana/kibana.crt'
+    key: '${CERTS_DIR}/kibana/kibana.key'
+    keyPassphrase: '${KEY_PASSPHRASE}'
+
+xpack:
+  security.enabled: true

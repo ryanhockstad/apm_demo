@@ -1,0 +1,98 @@
+version: '3'
+services:
+
+  node-1:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${VER}
+    hostname: node-1
+    container_name: node-1
+    environment:
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - PEM_PASSWORD=${PEM_PASSWORD}
+      - cluster.name=my_cluster
+      - node.name=node-1
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - CERTS_DIR=${CERTS_DIR}
+    ports:
+      - 9200:9200
+    volumes:
+      - 'certs:${CERTS_DIR}' 
+      - ./config/elasticsearch/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+    networks:
+      - 'net'
+    healthcheck:
+      test: curl --cacert ${CERTS_DIR}/ca/ca.crt -s https://localhost:9200 >/dev/null; if [[ $$? == 52 ]]; then echo 0; else echo 1; fi
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  wait_until_es_ready:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${VER}
+    command: /usr/bin/true
+    depends_on: {"node-1": {"condition": "service_healthy"}}
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:${VER}
+    hostname: kibana
+    container_name: kibana
+    environment: 
+      ELASTICSEARCH_USERNAME: elastic
+      ELASTICSEARCH_PASSWORD: ${ELASTIC_PASSWORD}
+      KEY_PASSPHRASE: ${PEM_PASSWORD}
+      CERTS_DIR: ${CERTS_DIR}
+    ports:
+      - 5601:5601
+    volumes:
+      - 'certs:${CERTS_DIR}' 
+      - ./config/kibana/kibana.yml:/usr/share/kibana/config/kibana.yml
+    networks: 
+      - 'net'
+    depends_on:
+      - wait_until_es_ready
+    healthcheck:
+      test: curl --cacert ${CERTS_DIR}/ca/ca.crt -s https://localhost:5601 >/dev/null; if [[ $$? == 52 ]]; then echo 0; else echo 1; fi
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  wait_until_kib_ready:
+    image: docker.elastic.co/kibana/kibana:${VER}
+    command: /usr/bin/true
+    depends_on: {"kibana": {"condition": "service_healthy"}}
+
+  apm-server:
+    image: docker.elastic.co/apm/apm-server:${VER}
+    hostname: apm-server
+    container_name: apm-server
+    environment:
+      ELASTICSEARCH_USERNAME: elastic
+      ELASTICSEARCH_PASSWORD: ${ELASTIC_PASSWORD}
+      CERTS_DIR: ${CERTS_DIR}
+      PEM_PASSWORD: ${PEM_PASSWORD}
+    volumes:
+      - 'certs:${CERTS_DIR}'
+      - ./config/apm-server/apm-server.yml:/usr/share/apm-server/apm-server.yml
+    cap_add: ["CHOWN", "DAC_OVERRIDE", "SETGID", "SETUID"]
+    cap_drop: ["ALL"]
+    ports:
+    - 8200:8200
+    # command: >
+    #    apm-server 
+    networks:
+    - net
+    depends_on:
+      node-1:
+        condition: service_healthy
+      kibana:
+        condition: service_healthy
+    healthcheck:
+      interval: 10s
+      retries: 12
+      test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://localhost:8200/
+
+
+
+networks:
+  net:
+
+volumes:
+  certs:

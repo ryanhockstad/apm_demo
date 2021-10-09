@@ -1,0 +1,30 @@
+path.repo: ["/usr/share/elasticsearch/backup"]
+
+network:
+  host: "0"
+
+discovery.type: single-node
+
+xpack:
+  security:
+    enabled: true
+    http:
+      ssl:
+        enabled: true
+        certificate_authorities: ['${CERTS_DIR}/ca/ca.crt']
+        client_authentication: optional #required
+        certificate: '${CERTS_DIR}/node-1/node-1.crt'
+        key: '${CERTS_DIR}/node-1/node-1.key'
+        key_passphrase: ${PEM_PASSWORD}
+    authc:
+      api_key.enabled: true
+      realms:
+        pki:
+          realm1:
+            order: 1
+            certificate_authorities: ['${CERTS_DIR}/ca/ca.crt']
+        native:
+          realm2.order: 2
+  license:
+    self_generated:
+      type: trial

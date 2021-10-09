@@ -1,0 +1,11 @@
+instances:
+  - name: "node-1" 
+    dns: 
+      - "node-1"
+      - "localhost"
+  - name: "kibana"
+    dns:
+      - "kibana"
+  - name: "apm-server"
+    dns:
+      - "apm-server"
