@@ -9,3 +9,4 @@ instances:
   - name: "apm-server"
     dns:
       - "apm-server"
+      - "localhost"

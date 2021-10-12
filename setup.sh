@@ -8,8 +8,6 @@ then
 docker network create ${COMPOSE_PROJECT_NAME}\_net
 fi
 
-docker-compose build
-
 if ! docker volume ls | grep -q ${COMPOSE_PROJECT_NAME}\_certs
 then
   cp .env initialize/.env
@@ -18,7 +16,9 @@ then
   cd ..
 fi
 
-docker-compose up -d --remove-orphans
+# We need to get the CA certificate so we can add it to the Java Keystore in our web app
+docker-compose up -d node-1 --remove-orphans
+docker cp node-1:/usr/share/elasticsearch/config/certs/ca/ca.crt ./web_app
 
-# docker cp node-1:/usr/share/elasticsearch/config/certs/node-1 .
-# docker cp node-1:/usr/share/elasticsearch/config/certs/ca/ca.crt ./node-1
+docker-compose build
+docker-compose up -d

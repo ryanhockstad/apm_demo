@@ -25,11 +25,6 @@ services:
       timeout: 10s
       retries: 5
 
-  wait_until_es_ready:
-    image: docker.elastic.co/elasticsearch/elasticsearch:${VER}
-    command: /usr/bin/true
-    depends_on: {"node-1": {"condition": "service_healthy"}}
-
   kibana:
     image: docker.elastic.co/kibana/kibana:${VER}
     hostname: kibana
@@ -47,17 +42,13 @@ services:
     networks: 
       - 'net'
     depends_on:
-      - wait_until_es_ready
+      node-1:
+        condition: service_healthy
     healthcheck:
       test: curl --cacert ${CERTS_DIR}/ca/ca.crt -s https://localhost:5601 >/dev/null; if [[ $$? == 52 ]]; then echo 0; else echo 1; fi
       interval: 30s
       timeout: 10s
       retries: 5
-
-  wait_until_kib_ready:
-    image: docker.elastic.co/kibana/kibana:${VER}
-    command: /usr/bin/true
-    depends_on: {"kibana": {"condition": "service_healthy"}}
 
   apm-server:
     image: docker.elastic.co/apm/apm-server:${VER}
@@ -68,28 +59,43 @@ services:
       ELASTICSEARCH_PASSWORD: ${ELASTIC_PASSWORD}
       CERTS_DIR: ${CERTS_DIR}
       PEM_PASSWORD: ${PEM_PASSWORD}
+      SECRET_TOKEN: ${SECRET_TOKEN}
     volumes:
-      - 'certs:${CERTS_DIR}'
-      - ./config/apm-server/apm-server.yml:/usr/share/apm-server/apm-server.yml
+    - 'certs:${CERTS_DIR}'
+    - ./config/apm-server/apm-server.yml:/usr/share/apm-server/apm-server.yml
     cap_add: ["CHOWN", "DAC_OVERRIDE", "SETGID", "SETUID"]
     cap_drop: ["ALL"]
     ports:
     - 8200:8200
-    # command: >
-    #    apm-server 
     networks:
     - net
     depends_on:
-      node-1:
-        condition: service_healthy
       kibana:
         condition: service_healthy
     healthcheck:
+      test: curl --cacert ${CERTS_DIR}/ca/ca.crt -s https://localhost:8200/healthcheck >/dev/null; if [[ $$? == 52 ]]; then echo 0; else echo 1; fi
       interval: 10s
-      retries: 12
-      test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://localhost:8200/
+      timeout: 10s
+      retries: 5
 
-
+  java-web-app:
+    build: ./web_app
+    hostname: web-app
+    container_name: web-app
+    working_dir: /usr/src/web_app
+    environment:
+      ELASTIC_APM_SECRET_TOKEN: ${SECRET_TOKEN}
+    volumes:
+    - ./web_app/app:/usr/src/web_app
+    ports:
+    - 8080:8080
+    networks:
+    - net
+    entrypoint: ["java", "-javaagent:/usr/src/web_app/elastic-apm-agent-1.26.0.jar"]
+    command: -jar spring-petclinic-2.5.0-SNAPSHOT.jar
+    depends_on:
+      apm-server:
+        condition: service_healthy
 
 networks:
   net:
