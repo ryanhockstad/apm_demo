@@ -6,6 +6,7 @@ instances:
   - name: "kibana"
     dns:
       - "kibana"
+      - "localhost"
   - name: "apm-server"
     dns:
       - "apm-server"
